@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Wheel Picker - Pilih Pemenang</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #0f1120, #1a1440);
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 16px 60px;
+  }
+  h1 {
+    margin: 0 0 6px;
+    font-size: 26px;
+  }
+  .subtitle {
+    color: #b8b8d0;
+    margin-bottom: 24px;
+    font-size: 14px;
+    text-align: center;
+  }
+  .layout {
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 1100px;
+    width: 100%;
+  }
+  .wheel-area {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .wheel-wrap {
+    position: relative;
+    width: 420px;
+    height: 420px;
+  }
+  canvas {
+    display: block;
+    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.5));
+    cursor: pointer;
+  }
+  .pointer {
+    position: absolute;
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 16px solid transparent;
+    border-bottom: 16px solid transparent;
+    border-right: 30px solid #4caf50;
+    filter: drop-shadow(2px 0 3px rgba(0,0,0,0.4));
+    z-index: 5;
+  }
+  .center-btn {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 84px; height: 84px;
+    border-radius: 50%;
+    background: #fff;
+    border: 4px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #333;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: center;
+    line-height: 1.2;
+    user-select: none;
+    z-index: 4;
+  }
+  .center-btn:active { transform: translate(-50%, -50%) scale(0.96); }
+  .result-banner {
+    margin-top: 24px;
+    font-size: 22px;
+    font-weight: bold;
+    min-height: 32px;
+    text-align: center;
+    color: #ffd54f;
+  }
+  .panel {
+    background: #181933;
+    border-radius: 14px;
+    padding: 20px;
+    width: 340px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .panel h3 {
+    margin-top: 0;
+    font-size: 15px;
+    color: #b8b8d0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  textarea {
+    width: 100%;
+    height: 160px;
+    background: #0f1128;
+    color: #fff;
+    border: 1px solid #333457;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 14px;
+    resize: vertical;
+    font-family: inherit;
+  }
+  select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    background: #0f1128;
+    color: #fff;
+    border: 1px solid #333457;
+    font-size: 14px;
+    margin-top: 6px;
+  }
+  .row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  button.action {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background: #3f51b5;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  button.action:hover { background: #4d5fd1; }
+  button.spin {
+    margin-top: 16px;
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #43a047, #66bb6a);
+    color: #fff;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  button.spin:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .hint {
+    font-size: 12px;
+    color: #8a8ab0;
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+  .mode-toggle {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .mode-toggle label {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    border-radius: 8px;
+    background: #0f1128;
+    border: 1px solid #333457;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .mode-toggle input { display: none; }
+  .mode-toggle input:checked + span {
+    color: #ffd54f;
+  }
+  .mode-toggle label:has(input:checked) {
+    border-color: #ffd54f;
+    background: #2a2650;
+  }
+  .secret-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+  }
+  .secret-overlay.open { display: flex; }
+  .secret-panel {
+    background: #181933;
+    border: 1px solid #ffd54f;
+    border-radius: 14px;
+    padding: 24px;
+    width: 360px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  }
+  .secret-panel h3 {
+    margin-top: 0;
+    color: #ffd54f;
+  }
+  .secret-label {
+    display: block;
+    font-size: 13px;
+    color: #b8b8d0;
+    margin-top: 12px;
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+
+<h1 id="titleTapTrigger">🎡 Wheel Picker</h1>
+<div class="subtitle"> Pilih Pemenang </div>
+
+<div class="layout">
+  <div class="wheel-area">
+    <div class="wheel-wrap">
+      <div class="pointer"></div>
+      <canvas id="wheel" width="420" height="420"></canvas>
+      <div class="center-btn" id="spinCenter">KLIK<br>UNTUK<br>PUTAR</div>
+    </div>
+    <div class="result-banner" id="resultBanner"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Daftar Nama</h3>
+    <textarea id="namesInput">Ali
+Beatriz
+Charles
+Diya
+Eric
+Fatima
+Gabriel
+Hanna</textarea>
+    <div class="row">
+      <button class="action" id="applyBtn">Terapkan</button>
+      <button class="action" id="shuffleBtn">Acak</button>
+    </div>
+
+    <button class="spin" id="spinBtn">🎡 PUTAR RODA</button>
+    <div class="hint" id="secretStatusHint"></div>
+  </div>
+</div>
+
+<!-- Panel rahasia: hanya muncul lewat shortcut, tidak terlihat peserta -->
+<div class="secret-overlay" id="secretOverlay">
+  <div class="secret-panel">
+    <h3>🔒 Panel Pengatur (rahasia)</h3>
+    <p class="hint">Panel ini hanya bisa kamu buka lewat Ctrl+Shift+P. Peserta tidak akan melihat ini.</p>
+    <label class="secret-label">Pilih pemenang putaran berikutnya:</label>
+    <select id="secretWinnerSelect">
+      <option value="">🎲 Acak (tidak diatur)</option>
+    </select>
+    <div class="row" style="margin-top:14px;">
+      <button class="action" id="secretApplyBtn">Simpan</button>
+      <button class="action" id="secretCloseBtn" style="background:#555;">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const size = canvas.width;
+const center = size / 2;
+const radius = center - 6;
+
+const colors = ['#e53935','#3f51b5','#43a047','#fbc02d','#8e24aa','#00acc1','#f4511e','#3949ab','#7cb342','#fdd835'];
+
+let names = [];
+let rotation = 0; // current rotation in radians
+let spinning = false;
+let pendingWinnerName = ''; // '' = random, else exact name string set via secret panel
+
+function loadNamesFromInput() {
+  const raw = document.getElementById('namesInput').value;
+  names = raw.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+  if (names.length < 2) {
+    names = names.length === 1 ? [names[0], '???'] : ['A','B'];
+  }
+  updateSecretWinnerSelect();
+  updateSecretStatusHint();
+  drawWheel();
+}
+
+function updateSecretWinnerSelect() {
+  const sel = document.getElementById('secretWinnerSelect');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">🎲 Acak (tidak diatur)</option>';
+  names.forEach((n) => {
+    const opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = n;
+    sel.appendChild(opt);
+  });
+  // keep previous pending selection if still valid
+  if (names.includes(pendingWinnerName)) {
+    sel.value = pendingWinnerName;
+  } else {
+    pendingWinnerName = '';
+    sel.value = '';
+  }
+}
+
+function updateSecretStatusHint() {
+  // Only a subtle hint for the organizer if they know to look; kept vague on purpose.
+  const hint = document.getElementById('secretStatusHint');
+  hint.textContent = '';
+}
+
+function drawWheel() {
+  ctx.clearRect(0, 0, size, size);
+  const sliceAngle = (2 * Math.PI) / names.length;
+
+  ctx.save();
+  ctx.translate(center, center);
+  ctx.rotate(rotation);
+
+  for (let i = 0; i < names.length; i++) {
+    const start = i * sliceAngle;
+    const end = start + sliceAngle;
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, radius, start, end);
+    ctx.closePath();
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // text
+    ctx.save();
+    ctx.rotate(start + sliceAngle / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 17px Segoe UI, Arial';
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 3;
+    ctx.fillText(names[i], radius - 18, 6);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+function getWinningIndexAtRotation(rot) {
+  // Pointer is at angle 0 (pointing right, 3 o'clock), fixed in screen space.
+  // Wheel rotated by `rot`. Slice i occupies [i*sliceAngle, (i+1)*sliceAngle) before rotation.
+  const sliceAngle = (2 * Math.PI) / names.length;
+  let normalized = ((-rot) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+  let idx = Math.floor(normalized / sliceAngle);
+  return idx % names.length;
+}
+
+function targetRotationForIndex(targetIndex, extraSpins) {
+  const sliceAngle = (2 * Math.PI) / names.length;
+  // We want getWinningIndexAtRotation(finalRot) === targetIndex
+  // normalized = ((-finalRot) mod 2pi) in [targetIndex*sliceAngle, (targetIndex+1)*sliceAngle)
+  // pick middle of slice for a clean stop
+  const desiredNormalized = targetIndex * sliceAngle + sliceAngle / 2;
+  // -finalRot ≡ desiredNormalized (mod 2pi)  =>  finalRot ≡ -desiredNormalized (mod 2pi)
+  let base = -desiredNormalized;
+  base = ((base % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+  return base + extraSpins * 2 * Math.PI;
+}
+
+function spin() {
+  if (spinning || names.length < 2) return;
+  spinning = true;
+  document.getElementById('resultBanner').textContent = '';
+  document.getElementById('spinBtn').disabled = true;
+
+  let targetIndex;
+  if (pendingWinnerName && names.includes(pendingWinnerName)) {
+    targetIndex = names.indexOf(pendingWinnerName);
+  } else {
+    targetIndex = Math.floor(Math.random() * names.length);
+  }
+
+  const extraSpins = 6 + Math.random() * 3; // 6-9 full spins
+  const finalRotation = rotation + (targetRotationForIndex(targetIndex, extraSpins) - (rotation % (2*Math.PI)));
+  // simpler: compute a clean absolute target ensuring forward motion
+  const startRotation = rotation;
+  const rawTarget = targetRotationForIndex(targetIndex, Math.ceil(extraSpins));
+  // ensure target is ahead of current rotation by adding full turns
+  let diff = rawTarget - (startRotation % (2*Math.PI));
+  diff = ((diff % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+  const totalRotation = startRotation + diff + Math.floor(extraSpins) * 2 * Math.PI;
+
+  const duration = 4200 + Math.random() * 800;
+  const startTime = performance.now();
+
+  function easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 4);
+  }
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const eased = easeOutCubic(t);
+    rotation = startRotation + (totalRotation - startRotation) * eased;
+    drawWheel();
+
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      rotation = totalRotation;
+      drawWheel();
+      spinning = false;
+      const winIdx = getWinningIndexAtRotation(rotation);
+      const winnerName = names[winIdx];
+      document.getElementById('resultBanner').textContent = '🎉 Pemenang: ' + winnerName;
+
+      // Hapus pemenang dari daftar
+      names.splice(winIdx, 1);
+      document.getElementById('namesInput').value = names.join('\n');
+      if (pendingWinnerName === winnerName) pendingWinnerName = '';
+      rotation = 0;
+
+      if (names.length < 2) {
+        names = names.length === 1 ? [names[0], '(kosong)'] : ['(kosong)', '(kosong)'];
+        document.getElementById('spinBtn').disabled = true;
+      } else {
+        document.getElementById('spinBtn').disabled = false;
+      }
+      updateSecretWinnerSelect();
+      drawWheel();
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+document.getElementById('applyBtn').addEventListener('click', loadNamesFromInput);
+document.getElementById('shuffleBtn').addEventListener('click', () => {
+  for (let i = names.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [names[i], names[j]] = [names[j], names[i]];
+  }
+  document.getElementById('namesInput').value = names.join('\n');
+  updateWinnerSelect();
+  drawWheel();
+});
+document.getElementById('spinBtn').addEventListener('click', spin);
+document.getElementById('spinCenter').addEventListener('click', spin);
+canvas.addEventListener('click', spin);
+
+// --- Panel rahasia ---
+const secretOverlay = document.getElementById('secretOverlay');
+
+function openSecretPanel() {
+  updateSecretWinnerSelect();
+  secretOverlay.classList.add('open');
+}
+function closeSecretPanel() {
+  secretOverlay.classList.remove('open');
+}
+
+// Trigger untuk HP/tanpa keyboard: tap judul 5x cepat (dalam 3 detik)
+let tapCount = 0;
+let tapTimer = null;
+document.getElementById('titleTapTrigger').addEventListener('click', () => {
+  tapCount++;
+  if (tapTimer) clearTimeout(tapTimer);
+  tapTimer = setTimeout(() => { tapCount = 0; }, 3000);
+  if (tapCount >= 5) {
+    tapCount = 0;
+    clearTimeout(tapTimer);
+    if (secretOverlay.classList.contains('open')) {
+      closeSecretPanel();
+    } else {
+      openSecretPanel();
+    }
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
+    e.preventDefault();
+    if (secretOverlay.classList.contains('open')) {
+      closeSecretPanel();
+    } else {
+      openSecretPanel();
+    }
+  }
+  if (e.key === 'Escape') closeSecretPanel();
+});
+
+document.getElementById('secretApplyBtn').addEventListener('click', () => {
+  pendingWinnerName = document.getElementById('secretWinnerSelect').value;
+  closeSecretPanel();
+});
+document.getElementById('secretCloseBtn').addEventListener('click', closeSecretPanel);
+secretOverlay.addEventListener('click', (e) => {
+  if (e.target === secretOverlay) closeSecretPanel();
+});
+
+loadNamesFromInput();
+</script>
+</body>
+</html>
